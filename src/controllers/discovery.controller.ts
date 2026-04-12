@@ -8,7 +8,7 @@ import { createInternalClient } from "../utils/http.js";
 import { config } from "../config/index.js";
 
 const inventoryClient = createInternalClient(
- config.services.inventory|| "http://localhost:3008",
+  config.services.inventory || "http://localhost:3008",
 );
 const shopClient = createInternalClient(
   config.services.shop || "http://localhost:3004",
@@ -32,10 +32,11 @@ export const mapToProductDetails = (productData: any, shopData: any) => {
 
     images: p?.product?.images?.map((img: any) => img?.url) ?? [],
     primaryImage: p?.product?.primaryImage ?? null,
+    productImage: p?.product?.primaryImage ?? null,
 
     price: {
-      mrp: p?.pricing?.mrpPerPack ?? 0,
-      sellingPrice: p?.pricing?.salePricePerPack ?? 0,
+      mrp: p?.pricing?.mrp ?? 0,
+      sellingPrice: p?.pricing?.sellingPrice ?? 0,
       discount: p?.pricing?.discountPercentage ?? 0,
     },
 
@@ -57,10 +58,10 @@ export const mapToProductDetails = (productData: any, shopData: any) => {
 
     shop: s
       ? {
-          id: s?.id,
-          name: s?.name,
-          rating: s?.ratings?.average ?? 0,
-        }
+        id: s?.id,
+        name: s?.name,
+        rating: s?.ratings?.average ?? 0,
+      }
       : null,
   };
 };
@@ -156,6 +157,7 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
         name: doc.name,
         description: doc.description,
         image: doc.primaryImage,
+        productImage: doc.productImage || doc.primaryImage,
         mrp: doc.pricing?.mrp,
         sellingPrice: doc.pricing?.sellingPrice,
         quantity: doc.stock,
@@ -176,8 +178,8 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
   const nextCursor =
     hits.length === pageSize
       ? Buffer.from(JSON.stringify(hits[hits.length - 1].sort)).toString(
-          "base64"
-        )
+        "base64"
+      )
       : null;
 
   return res.status(200).json(
@@ -236,16 +238,16 @@ export const getNearbyShops = asyncHandler(
               ...(shopIds.length > 0
                 ? [{ terms: { id: shopIds } }]
                 : [
-                    {
-                      geo_distance: {
-                        distance: `${radiusKm}km`,
-                        location: {
-                          lat: userLat,
-                          lon: userLng,
-                        },
+                  {
+                    geo_distance: {
+                      distance: `${radiusKm}km`,
+                      location: {
+                        lat: userLat,
+                        lon: userLng,
                       },
                     },
-                  ]),
+                  },
+                ]),
             ],
           },
         },
@@ -280,8 +282,8 @@ export const getNearbyShops = asyncHandler(
     const nextCursor =
       hits.length === pageSize
         ? Buffer.from(JSON.stringify(hits[hits.length - 1].sort)).toString(
-            "base64"
-          )
+          "base64"
+        )
         : null;
 
     return res.status(200).json(
@@ -313,7 +315,7 @@ export const getSingleProductDetails = asyncHandler(
       shopClient.get(`/api/v1/internal/shops/details/${shopId}`),
     ]);
 
-    console.log(productResult,shopResult)
+    console.log(productResult, shopResult)
 
     const productData =
       productResult.status === "fulfilled" ? productResult.value.data : null;
