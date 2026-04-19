@@ -6,6 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { createInternalClient } from "../utils/http.js";
 import { config } from "../config/index.js";
+import { Buffer } from "node:buffer";
 
 const inventoryClient = createInternalClient(
   config.services.inventory || "http://localhost:3008",
@@ -122,36 +123,34 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  const esResult = await esClient.search({
-    index: "shop_products",
-    body: {
-      query: {
-        bool: {
-          must,
-          filter,
+  const queryBody = {
+    query: {
+      bool: {
+        must,
+        filter,
+      },
+    },
+    sort: [
+      {
+        _geo_distance: {
+          location: { lat: userLat, lon: userLng },
+          order: "asc",
+          unit: "km",
+          distance_type: "arc",
         },
       },
-      sort: [
-        {
-          _geo_distance: {
-            location: { lat: userLat, lon: userLng },
-            order: "asc",
-            unit: "km",
-            distance_type: "arc",
-          },
-        },
-        { id: "asc" },
-      ],
-      size: pageSize,
-    },
+      { id: "asc" },
+    ] as any,
+    search_after: searchAfter,
+    size: pageSize,
   };
 
   console.log("🔍 ES Search Query:", JSON.stringify(queryBody, null, 2));
 
-  const esResult = await esClient.search({
+  const esResult: any = await esClient.search({
     index: "shop_products",
-    body: queryBody.body,
-  });
+    body: queryBody,
+  } as any);
 
   const hits = esResult.body.hits.hits;
 
@@ -271,7 +270,7 @@ export const getNearbyShops = asyncHandler(
         ],
         search_after: searchAfter,
         size: pageSize,
-      },
+      } as any,
     });
 
     const hits = esResult.body.hits.hits;
@@ -322,12 +321,10 @@ export const getSingleProductDetails = asyncHandler(
       shopClient.get(`/api/v1/internal/shops/details/${shopId}`),
     ]);
 
-    console.log(productResult, shopResult)
-
     const productData =
       productResult.status === "fulfilled" ? productResult.value.data : null;
     const shopData =
-      shopResult.status === "fulfilled" ? shopResult.value.data.data : null;
+      shopResult.status === "fulfilled" ? shopResult.value.data?.data : null;
 
     const message =
       shopResult.status === "rejected"
@@ -339,7 +336,7 @@ export const getSingleProductDetails = asyncHandler(
       .json(
         new ApiResponse(
           200,
-          mapToProductDetails(productData.data, shopData),
+          mapToProductDetails(productData?.data, shopData),
           message,
         ),
       );
