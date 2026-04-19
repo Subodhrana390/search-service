@@ -74,7 +74,7 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
     cursor,
     lat,
     lng,
-    radius = "10",
+    radius = "20",
   } = req.query as Record<string, string>;
 
   const userLat = parseFloat(lat);
@@ -99,6 +99,7 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
         query,
         fields: ["name^6", "brand^4", "description^2"],
         type: "bool_prefix",
+        fuzziness: "AUTO",
       },
     });
   }
@@ -141,9 +142,15 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
         },
         { id: "asc" },
       ],
-      search_after: searchAfter,
       size: pageSize,
     },
+  };
+
+  console.log("🔍 ES Search Query:", JSON.stringify(queryBody, null, 2));
+
+  const esResult = await esClient.search({
+    index: "shop_products",
+    body: queryBody.body,
   });
 
   const hits = esResult.body.hits.hits;
